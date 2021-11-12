@@ -22,15 +22,18 @@ namespace BuildCompanyInEF_Core
         public DbSet<Equipment> Equipments{ get; set; }
         public DbSet<Working> Workings{ get; set; }
 
+        public IQueryable<Order> GetOrderPrice(int price) => FromExpression(() => GetOrderPrice(price));
 
         public ApplicationContext(DbContextOptions<ApplicationContext> options): base(options)
         {
-            Database.EnsureDeleted();
-            Database.EnsureCreated();
+            //Database.EnsureDeleted();
+            //Database.EnsureCreated();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.HasDbFunction(() => GetOrderPrice(default));
+            modelBuilder.Entity<Order>().ToTable("Orders");
             modelBuilder.Entity<Working>()
                 .HasMany(w => w.Brigades)
                 .WithMany(b => b.Workings)
