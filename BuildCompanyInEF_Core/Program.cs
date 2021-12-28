@@ -1,10 +1,16 @@
 ﻿using BuildCompanyInEF_Core.Entities;
+using BuildCompanyInEF_Core.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+
 
 namespace BuildCompanyInEF_Core
 {
@@ -22,7 +28,7 @@ namespace BuildCompanyInEF_Core
                 PhoneNumber = "456132",
                 Specialization = "Search worker"
             };
-            Client client1 = new Client { Name = "Mike", Surname = "Brown", PhoneNumber = "452331" };
+            Client client1 = new Client { Name = "Mike", PhoneNumber = "452331" };
             Client client2 = new Client { Name = "Mike", Surname = "Robson", PhoneNumber = "45564231" };
             Client client3 = new Client { Name = "John", Surname = "Smith", PhoneNumber = "45568761" };
             Client client4 = new Client { Name = "Mike", Surname = "Thomson", PhoneNumber = "45568761" };
@@ -43,11 +49,11 @@ namespace BuildCompanyInEF_Core
             };
 
 
-            Order order1 = new Order { Company = ConstructionCompanyGlobal, Client = client1, ApproximatePrice = 46645, Date = new DateTime(20, 2, 2), Task = "build ", WorkingObject = workingObject1 };
-            Order order2 = new Order { Company = ConstructionCompanyGlobal, Client = client1, ApproximatePrice = 50000, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject1 };
-            Order order3 = new Order { Company = ConstructionCompanyGlobal, Client = client1, ApproximatePrice = 2000, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject1 };
-            Order order4 = new Order { Company = ConstructionCompanyGlobal, Client = client2, ApproximatePrice = 8000, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject2 };
-            Order order5 = new Order { Company = ConstructionCompanyGlobal, Client = client3, ApproximatePrice = 5500, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject2 };
+            Order order1 = new Order {  Task = "build "};
+            //Order order2 = new Order { Company = ConstructionCompanyGlobal, Client = client1, ApproximatePrice = 50000, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject1 };
+            //Order order3 = new Order { Company = ConstructionCompanyGlobal, Client = client1, ApproximatePrice = 2000, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject1 };
+            //Order order4 = new Order { Company = ConstructionCompanyGlobal, Client = client2, ApproximatePrice = 8000, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject2 };
+            //Order order5 = new Order { Company = ConstructionCompanyGlobal, Client = client3, ApproximatePrice = 5500, Date = new DateTime(21, 4, 8), Task = "build", WorkingObject = workingObject2 };
 
 
             Employee employee1 = new Employee
@@ -194,7 +200,7 @@ namespace BuildCompanyInEF_Core
 
 
             List<Client> clients = new List<Client> { client1, client2 };
-            List<Order> orders = new List<Order> { order1, order2 };
+            List<Order> orders = new List<Order> { order1};
             List<Employee> employees = new List<Employee> { employee1, employee2 };
             List<WorkingObject> workingObjects = new List<WorkingObject> { workingObject1, workingObject2 };
             List<Brigade> brigades = new List<Brigade> { brigade1, brigade2 };
@@ -206,29 +212,69 @@ namespace BuildCompanyInEF_Core
 
             var options = optionBuilder.UseSqlServer(GetConnectionString()).Options;
 
+
+            using (ApplicationContext db = new ApplicationContext(options))
+            {
+                Stopwatch stopWatch = new Stopwatch();
+                int count = 200;
+
+
+                List<string> list = new List<string>();
+                List<Task> tasks = new List<Task>();
+                
+                var multThread = new WorkWithTask(db);
+
+                stopWatch.Start();
+
+                multThread.AddedClient(count);
+
+                stopWatch.Stop();
+                Console.WriteLine($"Threads: {stopWatch.Elapsed}");
+                stopWatch.Reset();
+
+                stopWatch.Start();
+                for (int i = 0; i < count; i++)
+                    tasks.Add(Task.Factory.StartNew(() => { multThread.AddedClientInDataBase(5); }));              
+
+                Task.WaitAll(tasks.ToArray());
+                stopWatch.Stop();
+                Console.WriteLine($"Tasks: {stopWatch.Elapsed}");
+
+
+                multThread.PullOutNames(5);
+                multThread.GetDataAsync(5);
+
+                Task t1 = multThread.GetObjectsAsync();                
+                Task.WaitAll(t1);
+
+                Task t2 = multThread.Example_Linq();
+                Task.WaitAll(t2);
+
+            }
+
             //using (ApplicationContext db = new ApplicationContext(options))
             //{
-            //    db.ConstructionCompanies.Add(ConstructionCompanyGlobal);
-            //    db.Orders.AddRange(order1, order2, order3, order4, order5);
-            //    db.Departments.Add(department);
-            //    db.WorkingObjects.AddRange(workingObject1, workingObject2);
+            //    //db.ConstructionCompanies.Add(ConstructionCompanyGlobal);
+            //    db.Orders.AddRange(order1);
+            //    //db.Departments.Add(department);
+            //    //db.WorkingObjects.AddRange(workingObject1, workingObject2);
             //    db.Clients.AddRange(client1, client2, client3);
-            //    db.Employees.AddRange(employee1, employee2);
-            //    db.DirectWorks.AddRange(directWork1, directWork2);
-            //    db.Brigades.AddRange(brigade1, brigade2);
+            //    //db.Employees.AddRange(employee1, employee2);
+            //    //db.DirectWorks.AddRange(directWork1, directWork2);
+            //    //db.Brigades.AddRange(brigade1, brigade2);
 
-            //    brigade1.WorkPlans.Add(new WorkPlan { Working = workingBill, DateTimeShift = new DateTime(2020, 7, 4) });
-            //    brigade1.WorkPlans.Add(new WorkPlan { Working = workingPetya, DateTimeShift = new DateTime(2020, 11, 6) });
-            //    brigade1.WorkPlans.Add(new WorkPlan { Working = workingKolya, DateTimeShift = new DateTime(2020, 12, 6) });
-            //    brigade1.WorkPlans.Add(new WorkPlan { Working = workingSasha, DateTimeShift = new DateTime(2019, 9, 6) });
-            //    brigade2.WorkPlans.Add(new WorkPlan { Working = workingVasya, DateTimeShift = new DateTime(2020, 10, 7) });
-            //    brigade2.WorkPlans.Add(new WorkPlan { Working = workingMike, DateTimeShift = new DateTime(2020, 11, 2) });
-            //    brigade2.WorkPlans.Add(new WorkPlan { Working = workingRoma, DateTimeShift = new DateTime(2018, 11, 2) });
+            //    //brigade1.WorkPlans.Add(new WorkPlan { Working = workingBill, DateTimeShift = new DateTime(2020, 7, 4) });
+            //    //brigade1.WorkPlans.Add(new WorkPlan { Working = workingPetya, DateTimeShift = new DateTime(2020, 11, 6) });
+            //    //brigade1.WorkPlans.Add(new WorkPlan { Working = workingKolya, DateTimeShift = new DateTime(2020, 12, 6) });
+            //    //brigade1.WorkPlans.Add(new WorkPlan { Working = workingSasha, DateTimeShift = new DateTime(2019, 9, 6) });
+            //    //brigade2.WorkPlans.Add(new WorkPlan { Working = workingVasya, DateTimeShift = new DateTime(2020, 10, 7) });
+            //    //brigade2.WorkPlans.Add(new WorkPlan { Working = workingMike, DateTimeShift = new DateTime(2020, 11, 2) });
+            //    //brigade2.WorkPlans.Add(new WorkPlan { Working = workingRoma, DateTimeShift = new DateTime(2018, 11, 2) });
 
-            //    directWork1.Equipments.Add(equipment1);
-            //    directWork1.Equipments.Add(equipment2);
-            //    directWork2.Equipments.Add(equipment3);
-            //    directWork2.Equipments.Add(equipment4);
+            //    //directWork1.Equipments.Add(equipment1);
+            //    //directWork1.Equipments.Add(equipment2);
+            //    //directWork2.Equipments.Add(equipment3);
+            //    //directWork2.Equipments.Add(equipment4);
 
             //    db.SaveChanges();
 
@@ -255,7 +301,7 @@ namespace BuildCompanyInEF_Core
             //ExecJoin(options);
             //Console.WriteLine();
 
-            ExecGroupBy(options);
+            //ExecGroupBy(options);
             //Console.WriteLine();
 
             //ExecUnionIntersectExcept(options);
@@ -274,6 +320,8 @@ namespace BuildCompanyInEF_Core
             //Console.WriteLine();
 
             //ExecStoredProcedore(options);
+
+
         }
 
         static public void ExecQueryOnLinq(DbContextOptions<ApplicationContext> options)
@@ -397,7 +445,7 @@ namespace BuildCompanyInEF_Core
                     {
                         g.Key,
                         Sum = g.Sum(x => x.ApproximatePrice)
-                    })
+                    });
 
                 var list2 = db.Orders.GroupBy(w => w.WorkingObject.WorkingObjectId)
                     .Select(g => new
@@ -406,22 +454,24 @@ namespace BuildCompanyInEF_Core
                         Sum = g.Sum(x => x.ApproximatePrice)
                     }).OrderByDescending(g => g.Sum).Take(1);
 
-                foreach (var l in list)
+                foreach (var l in list2)
                     Console.WriteLine($"Id working obj: {l.Key}, Sum: {l.Sum}");
-               
-                //var maxPrice = db.Orders.GroupBy(w => w.WorkingObject.WorkingObjectId)
-                //    .Select(g => new
-                //    {
-                //        g.Key,
-                //        Sum = g.Sum(x=>x.ApproximatePrice)
-                //    }).Max(g=>g.Sum);
 
-                //Console.WriteLine($"Max price of working obj: {maxPrice}");
+                var maxPrice = db.Orders.GroupBy(w => w.WorkingObject.WorkingObjectId)
+                    .Select(g => new
+                    {
+                        g.Key,
+                        Sum = g.Sum(x => x.ApproximatePrice)
+                    }).Max(g => g.Sum);
 
 
 
-               
-                
+                Console.WriteLine($"Max price of working obj: {maxPrice}");
+
+
+
+
+
             }
 
            /* using (ApplicationContext db = new ApplicationContext(options))

@@ -24,12 +24,15 @@ namespace BuildCompanyInEF_Core
 
         public IQueryable<Order> GetOrderPrice(int price) => FromExpression(() => GetOrderPrice(price));
 
-        public ApplicationContext(DbContextOptions<ApplicationContext> options): base(options)
-        {
-            //Database.EnsureDeleted();
-            //Database.EnsureCreated();
+        public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
+        { 
+            Database.EnsureDeleted();
+            Database.EnsureCreated();
         }
 
+        
+
+       
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasDbFunction(() => GetOrderPrice(default));
